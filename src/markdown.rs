@@ -12,4 +12,6 @@ pub enum Span {
     BoldItalic(String),
     //删除线，
     Strikeout(String),
+    //正常文本
+    Text(String),
 }

@@ -20,11 +20,56 @@ pub enum TokenSpan {
 }
 
 impl TokenSpan {
+    //将token转换为字符串
     pub fn display(&self) -> &str {
         match self {
             TokenSpan::Bold => "**",
             TokenSpan::Italic => "*",
             TokenSpan::BoldItalic => "***",
+            TokenSpan::Strikeout => "~",
+            TokenSpan::Text(s) => s,
+            _ => "",
+        }
+    }
+
+    //是否可能为bold
+    //仅限于**1111***或者***1111**
+    pub fn is_possible_bold(&self) -> bool {
+        match self {
+            TokenSpan::Bold => true,
+            TokenSpan::BoldItalic => true,
+            _ => false,
+        }
+    }
+
+    //是否可能为italic
+    //仅限于*1111***或者***11*
+    //仅限于*111**或者**11*
+    pub fn is_possible_italic(&self) -> bool {
+        match self {
+            TokenSpan::Bold => true,
+            TokenSpan::Italic => true,
+            TokenSpan::BoldItalic => true,
+            _ => false,
+        }
+    }
+
+    //bold解析
+    pub fn display_bold(&self) -> &str {
+        match self {
+            TokenSpan::Italic => "*",
+            TokenSpan::BoldItalic => "*",
+            TokenSpan::Strikeout => "~",
+            TokenSpan::Text(s) => s,
+            _ => "",
+        }
+    }
+
+    //italic解析
+    pub fn display_italic(&self) -> &str {
+        match self {
+            TokenSpan::BoldItalic => "**",
+            TokenSpan::Bold => "*",
             TokenSpan::Strikeout => "~",
             TokenSpan::Text(s) => s,
             _ => "",
@@ -55,7 +100,7 @@ pub fn parse_three(i: &str) -> IResult<&str, TokenSpan> {
     )(i)
 }
 
-pub fn parse_token_text(i: &str) -> IResult<&str, TokenSpan> {
+fn parse_token_text(i: &str) -> IResult<&str, TokenSpan> {
     context(
         "parse_token_text",
         map(
@@ -66,7 +111,7 @@ pub fn parse_token_text(i: &str) -> IResult<&str, TokenSpan> {
 }
 
 //解析Finish
-pub fn parse_token_finish(i: &str) -> IResult<&str, TokenSpan> {
+fn parse_token_finish(i: &str) -> IResult<&str, TokenSpan> {
     context(
         "parse_token_finish",
         map(peek(tag("\n")), |_| TokenSpan::Finish),
@@ -82,31 +127,27 @@ pub fn parse_token_strikeout(i: &str) -> IResult<&str, TokenSpan> {
 }
 
 //解析BoldItalic
-pub fn parse_token_bold_italic(i: &str) -> IResult<&str, TokenSpan> {
+fn parse_token_bold_italic(i: &str) -> IResult<&str, TokenSpan> {
     context(
         "parse_token_bold_italic",
-        map(tag("*"), |_| TokenSpan::BoldItalic),
+        map(tag("***"), |_| TokenSpan::BoldItalic),
     )(i)
 }
 
 //解析Italic
-pub fn parse_token_italic(i: &str) -> IResult<&str, TokenSpan> {
-    context("parse_token_italic", map(tag("**"), |_| TokenSpan::Italic))(i)
+fn parse_token_italic(i: &str) -> IResult<&str, TokenSpan> {
+    context("parse_token_italic", map(tag("*"), |_| TokenSpan::Italic))(i)
 }
 
 //解析Bold
-pub fn parse_token_bold(i: &str) -> IResult<&str, TokenSpan> {
-    context("parse_token_bold", map(tag("***"), |_| TokenSpan::Bold))(i)
-}
-
-pub fn parse(i: &str) -> IResult<&str, &str> {
-    alt((tag("***"), tag("**"), tag("*")))(i)
+fn parse_token_bold(i: &str) -> IResult<&str, TokenSpan> {
+    context("parse_token_bold", map(tag("**"), |_| TokenSpan::Bold))(i)
 }
 
 mod test {
     use super::{
-        parse, parse_token_bold, parse_token_bold_italic, parse_token_finish, parse_token_italic,
-        parse_token_strikeout, parse_token_text, TokenSpan,
+        parse_three, parse_token_bold, parse_token_bold_italic, parse_token_finish,
+        parse_token_italic, parse_token_strikeout, parse_token_text, TokenSpan,
     };
 
     #[test]
@@ -139,7 +180,7 @@ mod test {
 
     #[test]
     fn parse_token_bold_italic_test() {
-        let i = "*";
+        let i = "***";
         let (i, o) = parse_token_bold_italic(i).unwrap();
         assert_eq!(TokenSpan::BoldItalic, o);
         assert_eq!("", i);
@@ -147,7 +188,7 @@ mod test {
 
     #[test]
     fn parse_token_italic_test() {
-        let i = "**";
+        let i = "*";
         let (i, o) = parse_token_italic(i).unwrap();
         assert_eq!(TokenSpan::Italic, o);
         assert_eq!("", i);
@@ -155,16 +196,16 @@ mod test {
 
     #[test]
     fn parse_token_bold_test() {
-        let i = "***";
+        let i = "**";
         let (i, o) = parse_token_bold(i).unwrap();
         assert_eq!(TokenSpan::Bold, o);
         assert_eq!("", i);
     }
 
     #[test]
-    fn parse_test() {
+    fn parse_three_test() {
         let i = "***";
-        let (i, _o) = parse(i).unwrap();
+        let (i, _o) = parse_three(i).unwrap();
         assert_eq!("", i);
     }
 }
