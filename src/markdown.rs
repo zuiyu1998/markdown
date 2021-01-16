@@ -14,4 +14,6 @@ pub enum Span {
     Strikeout(String),
     //正常文本
     Text(String),
+    //超链接
+    Link(String, String, Option<String>),
 }
