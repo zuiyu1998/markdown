@@ -6,11 +6,10 @@ use nom::{
     bytes::complete::{tag, take_till1},
     combinator::map,
     error::{context, ContextError, Error, ErrorKind, ParseError},
-    multi::many1,
     sequence::{delimited, separated_pair, tuple},
     Err, IResult,
 };
-use tokenspan::{parse_three, parse_token, parse_token_strikeout, parse_token_text, TokenSpan};
+use tokenspan::{parse_three, parse_token, parse_token_strikeout, TokenSpan};
 
 //解析文本
 pub fn parse_span(i: &str) -> IResult<&str, Span> {
@@ -95,13 +94,13 @@ fn parse_span_url_not_title(i: &str) -> IResult<&str, (String, Option<String>)> 
 
 //解析普通文本
 pub fn parse_span_text(i: &str) -> IResult<&str, Span> {
-    let (i, o) = parse_token_text(i)?;
-    if let TokenSpan::Text(s) = o {
-        return Ok((i, Span::Text(s)));
-    } else {
+    let (i, o) = parse_token(i)?;
+    if TokenSpan::Finish == o {
         let e = Error::from_error_kind(i, ErrorKind::Tag);
         let e = Error::add_context(i, "parse_span_text", e);
         return Err(Err::Error(e));
+    } else {
+        return Ok((i, Span::Text(o.display().to_string())));
     }
 }
 
@@ -291,7 +290,7 @@ mod test {
         // let i = "***11*\n";
         // let i = "**11*\n";
         // let i = "11*\n";
-        let i = "[123](http://baidu.com 111)\n";
+        let i = "[123](http://baidu.com 111)";
         let (i, o) = parse_span(i).unwrap();
         assert_eq!("\n", i);
         // assert_eq!(Span::Text("11".to_string()), o);
@@ -313,7 +312,7 @@ mod test {
 
     #[test]
     pub fn parse_span_text_test() {
-        let i = "11\n";
+        let i = "\n";
         let (i, o) = parse_span_text(i).unwrap();
         assert_eq!("\n", i);
         assert_eq!(Span::Text("11".to_string()), o);

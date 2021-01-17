@@ -6,13 +6,22 @@ use nom::{
     combinator::{all_consuming, map, peek},
     error::context,
     multi::many1,
-    sequence::terminated,
+    sequence::{terminated, tuple},
     IResult,
 };
 
-// pub fn parse_block_paragraph(i: &str) -> IResult<&str, Block> {
-//     context("parse_block_paragraph", map(first, second))
-// }
+pub fn parse_block_paragraph(i: &str) -> IResult<&str, Block> {
+    context(
+        "parse_block_paragraph",
+        map(
+            terminated(
+                tuple((parse_block_paragraph_level, parse_block_paragraph_span)),
+                parse_block_finish,
+            ),
+            |(num, vec)| Block::Paragraph(num, vec),
+        ),
+    )(i)
+}
 
 pub fn parse_block_paragraph_span(i: &str) -> IResult<&str, Vec<Span>> {
     context(
@@ -40,16 +49,27 @@ pub fn parse_block_finish(i: &str) -> IResult<&str, ()> {
 }
 
 mod test {
-    use super::{parse_block_finish, parse_block_paragraph_level, parse_block_paragraph_span};
-    use crate::markdown::Span;
+    use super::{
+        parse_block_finish, parse_block_paragraph, parse_block_paragraph_level,
+        parse_block_paragraph_span,
+    };
+    use crate::markdown::{Block, Span};
 
-    // #[test]
-    // fn parse_block_paragraph_span_test() {
-    //     let i = "111\n";
-    //     let (i, o) = parse_block_paragraph_span(i).unwrap();
-    //     assert_eq!(vec![Span::Text("11".to_string())], o);
-    //     assert_eq!("11", i);
-    // }
+    #[test]
+    fn parse_block_paragraph_test() {
+        let i = "# ~111~[11]*********daadadad[123](http://baidu.com 111)11\n";
+        let (i, o) = parse_block_paragraph(i).unwrap();
+        assert_eq!(Block::Paragraph(1, vec![]), o);
+        assert_eq!("11", i);
+    }
+
+    #[test]
+    fn parse_block_paragraph_span_test() {
+        let i = "111[11]*********daadadad[123](http://baidu.com 111)";
+        let (i, o) = parse_block_paragraph_span(i).unwrap();
+        assert_eq!(vec![Span::Text("11".to_string())], o);
+        assert_eq!("11", i);
+    }
 
     #[test]
     fn parse_block_paragraph_level_test() {
