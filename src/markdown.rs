@@ -1,6 +1,9 @@
 pub struct Markdown(Vec<Block>);
 
-pub enum Block {}
+pub enum Block {
+    //段落
+    Paragraph(usize, Vec<Span>),
+}
 
 #[derive(Debug, PartialEq)]
 pub enum Span {

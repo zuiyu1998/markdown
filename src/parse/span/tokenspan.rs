@@ -16,6 +16,7 @@ pub enum TokenSpan {
     BoldItalic,
     Strikeout,
     Finish,
+    Brackets,
     Text(String),
 }
 
@@ -28,6 +29,7 @@ impl TokenSpan {
             TokenSpan::BoldItalic => "***",
             TokenSpan::Strikeout => "~",
             TokenSpan::Text(s) => s,
+            TokenSpan::Brackets => "[",
             _ => "",
         }
     }
@@ -61,6 +63,7 @@ impl TokenSpan {
             TokenSpan::BoldItalic => "*",
             TokenSpan::Strikeout => "~",
             TokenSpan::Text(s) => s,
+            TokenSpan::Brackets => "[",
             _ => "",
         }
     }
@@ -72,16 +75,19 @@ impl TokenSpan {
             TokenSpan::Bold => "*",
             TokenSpan::Strikeout => "~",
             TokenSpan::Text(s) => s,
+            TokenSpan::Brackets => "[",
             _ => "",
         }
     }
 }
 
+//解析所有token
 pub fn parse_token(i: &str) -> IResult<&str, TokenSpan> {
     context(
         "parse_token",
         alt((
             parse_token_text,
+            parse_token_brackets,
             parse_token_finish,
             parse_token_strikeout,
             parse_three,
@@ -89,6 +95,7 @@ pub fn parse_token(i: &str) -> IResult<&str, TokenSpan> {
     )(i)
 }
 
+//统一解析*** ** *
 pub fn parse_three(i: &str) -> IResult<&str, TokenSpan> {
     context(
         "parse_three",
@@ -100,11 +107,21 @@ pub fn parse_three(i: &str) -> IResult<&str, TokenSpan> {
     )(i)
 }
 
-fn parse_token_text(i: &str) -> IResult<&str, TokenSpan> {
+//解析方括号
+//解析Finish
+fn parse_token_brackets(i: &str) -> IResult<&str, TokenSpan> {
+    context(
+        "parse_token_brackets",
+        map(tag("["), |_| TokenSpan::Brackets),
+    )(i)
+}
+
+//解析普通文本
+pub fn parse_token_text(i: &str) -> IResult<&str, TokenSpan> {
     context(
         "parse_token_text",
         map(
-            take_till1(|c: char| c == '\n' || c == '*' || c == '~'),
+            take_till1(|c: char| c == '\n' || c == '*' || c == '~' || c == '['),
             |s: &str| TokenSpan::Text(s.to_string()),
         ),
     )(i)

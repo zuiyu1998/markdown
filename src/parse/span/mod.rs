@@ -6,10 +6,11 @@ use nom::{
     bytes::complete::{tag, take_till1},
     combinator::map,
     error::{context, ContextError, Error, ErrorKind, ParseError},
+    multi::many1,
     sequence::{delimited, separated_pair, tuple},
     Err, IResult,
 };
-use tokenspan::{parse_three, parse_token, parse_token_strikeout, TokenSpan};
+use tokenspan::{parse_three, parse_token, parse_token_strikeout, parse_token_text, TokenSpan};
 
 //解析文本
 pub fn parse_span(i: &str) -> IResult<&str, Span> {
@@ -27,7 +28,7 @@ pub fn parse_span(i: &str) -> IResult<&str, Span> {
 }
 
 //解析超链接
-fn parse_span_link(i: &str) -> IResult<&str, Span> {
+pub fn parse_span_link(i: &str) -> IResult<&str, Span> {
     context(
         "parse_span_link",
         map(
@@ -42,7 +43,11 @@ fn parse_span_link_text(i: &str) -> IResult<&str, String> {
     context(
         "parse_span_link_text",
         map(
-            delimited(tag("["), take_till1(|c: char| c == ']'), tag("]")),
+            delimited(
+                tag("["),
+                take_till1(|c: char| c == ']' || c == '\n'),
+                tag("]"),
+            ),
             |s: &str| s.to_string(),
         ),
     )(i)
@@ -63,9 +68,9 @@ fn parse_span_url_title(i: &str) -> IResult<&str, (String, Option<String>)> {
             delimited(
                 tag("("),
                 separated_pair(
-                    take_till1(|c: char| c == ' '),
+                    take_till1(|c: char| c == ' ' || c == '\n'),
                     tag(" "),
-                    take_till1(|c: char| c == ')'),
+                    take_till1(|c: char| c == ')' || c == '\n'),
                 ),
                 tag(")"),
             ),
@@ -78,33 +83,25 @@ fn parse_span_url_not_title(i: &str) -> IResult<&str, (String, Option<String>)> 
     context(
         "parse_span_url_not_title",
         map(
-            delimited(tag("("), take_till1(|c: char| c == ')'), tag(")")),
+            delimited(
+                tag("("),
+                take_till1(|c: char| c == ')' || c == '\n'),
+                tag(")"),
+            ),
             |s: &str| (s.to_string(), None),
         ),
     )(i)
 }
 
 //解析普通文本
-fn parse_span_text(i: &str) -> IResult<&str, Span> {
-    let mut token: Vec<TokenSpan> = Vec::new();
-
-    let mut tmp = i;
-    loop {
-        let (i, o) = parse_token(tmp)?;
-
-        match o {
-            TokenSpan::Finish => {
-                let s = token
-                    .iter()
-                    .fold(String::new(), |s, item| s + item.display());
-                return Ok((i, Span::Text(s)));
-            }
-            _ => {
-                token.push(o);
-            }
-        }
-
-        tmp = i;
+pub fn parse_span_text(i: &str) -> IResult<&str, Span> {
+    let (i, o) = parse_token_text(i)?;
+    if let TokenSpan::Text(s) = o {
+        return Ok((i, Span::Text(s)));
+    } else {
+        let e = Error::from_error_kind(i, ErrorKind::Tag);
+        let e = Error::add_context(i, "parse_span_text", e);
+        return Err(Err::Error(e));
     }
 }
 
@@ -261,7 +258,7 @@ fn parse_span_strikeout(i: &str) -> IResult<&str, Span> {
 mod test {
     use super::{
         parse_span, parse_span_bold, parse_span_bold_italic, parse_span_italic, parse_span_link,
-        parse_span_strikeout, parse_span_text,
+        parse_span_strikeout, parse_span_text, test,
     };
     use crate::markdown::Span;
 
