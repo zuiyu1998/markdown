@@ -3,7 +3,15 @@ pub struct Markdown(Vec<Block>);
 #[derive(Debug, PartialEq)]
 pub enum Block {
     //段落
-    Paragraph(usize, Vec<Span>),
+    Header(usize, Vec<Span>),
+    //段落
+    Paragraph(Vec<Span>),
+    //换行符
+    Hr,
+    //图片
+    Image(String, String, Option<String>),
+    //引用
+    Quote(Vec<Block>),
 }
 
 #[derive(Debug, PartialEq)]

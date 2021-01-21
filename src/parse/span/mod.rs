@@ -53,7 +53,7 @@ fn parse_span_link_text(i: &str) -> IResult<&str, String> {
 }
 
 //解析超链接的url
-fn parse_span_link_url(i: &str) -> IResult<&str, (String, Option<String>)> {
+pub fn parse_span_link_url(i: &str) -> IResult<&str, (String, Option<String>)> {
     context(
         "parse_span_link_url",
         alt((parse_span_url_title, parse_span_url_not_title)),
